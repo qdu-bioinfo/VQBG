@@ -88,9 +88,12 @@ public:
     inline size_t get_kmer_count(kmer_int_type_t kmer_val) {
 
         kmer_map_base_iterator_t it = find_kmer(kmer_val);
-
-        if (it != kmer_map.end())
-            return it->second.first;
+        string rev_kmer = revcomp(intval_to_kmer(kmer_val,g_kmer_length));
+        kmer_int_type_t rev_intval = kmer_to_intval(rev_kmer);
+        kmer_map_base_iterator_t it2 = find_kmer(rev_intval);
+//
+        if (it != kmer_map.end()&& it2 != kmer_map.end())
+            return it->second.first+it2->second.first ;
         else
             return 0;
     }

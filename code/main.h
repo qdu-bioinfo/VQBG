@@ -6,12 +6,13 @@
 
 #include <getopt.h>
 
-static const char *short_options = "k:i:o:a:q";
+static const char *short_options = "k:i:t:o:a:q";
 
 static struct option long_options[] = {
         // general options
         {"kmer_length",required_argument,0,'k'},
         {"reads",required_argument,0,'i'},
+        {"trunk_filename",required_argument, 0,'t'},
         {"output_filename",required_argument, 0,'o'},
         {"fasta",required_argument, 0,'a'},
         {"fastq",required_argument, 0,'q'},

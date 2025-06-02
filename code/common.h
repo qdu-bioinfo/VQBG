@@ -33,6 +33,7 @@ extern std::vector<std::string> reads_file;
 extern std::string reads_type;
 
 extern std::string output_filename;
+extern std::string trunk_filename;
 
 #define OPT_DEBUG			313
 

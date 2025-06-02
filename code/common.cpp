@@ -24,6 +24,6 @@ int dep_search = 0;
 
 // assemble
 std::vector<std::string> reads_file;
-std::string kmers_file = "";
 std::string reads_type = "fastq";
 std::string output_filename = "paths.fasta";
+std::string trunk_filename = "";

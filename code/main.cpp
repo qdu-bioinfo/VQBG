@@ -25,7 +25,7 @@
 using namespace std;
 
 
-const int MAX_STR = 10340;
+const int MAX_STR = 100340;
 
 void load_data(std::vector<std::string>& data, std::string file, int k) {
 
@@ -66,7 +66,7 @@ void load_data(std::vector<std::string>& data, std::string file, int k) {
                     in.getline(c_line, MAX_STR);
                 }
             }
-            cout << "input-left-read: " << data.size() << endl;
+
         } else if (k == 2){
             while(!in.eof()) {
                 in.getline(c_line, MAX_STR);
@@ -82,10 +82,36 @@ void load_data(std::vector<std::string>& data, std::string file, int k) {
                     in.getline(c_line, MAX_STR);
                 }
             }
-            cout << "input-right-read: " << data.size() << endl;
+
         }
     }
 
+    in.close();
+}
+
+void trunk_data(std::string& data, std::string& file) {
+
+    std::fstream in;
+    in.open(file.c_str(), std::fstream::in);
+    if (!in.is_open()) {
+        std::cerr << "[error] File " << file << " can't be opened." << std::endl;
+        exit(1);
+    }
+
+    std::cerr << "Begin loading trunk ..." << std::endl;
+
+    char c_line[MAX_STR];
+    while(!in.eof()) {
+        in.getline(c_line, MAX_STR);
+        if (c_line[0] == '>') {
+            in.getline(c_line, MAX_STR);
+            std::string sequence(c_line);
+//            std::string re_sequence = revcomp(sequence);
+            data = sequence;
+        }
+    }
+
+    std::cout << data.size() <<" trunk have been loaded !" << std::endl;
     in.close();
 }
 
@@ -109,6 +135,7 @@ std::string usage() {
             << " --fasta/-a                    " << ": input reads file is in fasta format." << std::endl
             << " --fastq/-q                    " << ": input reads file is in fastq format." << std::endl
             << " --output_filename/-o <string> " << ": Name of the output file, default: paths.fasta." << std::endl
+            << " --trunk_filename/-t <string> " << ": Name of the trunk file." << std::endl
             << " --help/-h                     " << ": display the help information."<< std::endl
             << std::endl;
     usage_info
@@ -136,6 +163,9 @@ int parse_options(int argc, char* argv[]) {
             case 'o':
                 output_filename = optarg;
                 break;
+            case 't':
+                trunk_filename = optarg;
+                break;
             case 'a':
                 reads_type = "fasta";
                 break;
@@ -156,7 +186,7 @@ int parse_options(int argc, char* argv[]) {
     }
     if (g_help) {
         std::cout << usage() ;
-        exit(1);
+        exit(0);
     }
 
     if (reads_file.size() == 0) {
@@ -165,14 +195,18 @@ int parse_options(int argc, char* argv[]) {
         exit(1);
     }
 
+    if (trunk_filename == "") {
+        std::cerr << "Error : --trunk option needs an argument!! " << std::endl;
+        std::cout << usage() ;
+        exit(1);
+    }
+
     if (g_kmer_length > 32) {
         errAbort(const_cast<char *>("Length of kmer can not be excess 32!\n"));
     }
 
-
     return 0;
 }
-
 
 int main(int argc, char* argv[]){
 
@@ -191,7 +225,6 @@ int main(int argc, char* argv[]){
         int k = 1;
         for(const std::string& file : reads_file){
             std::cerr << file << std::endl;
-            std::cerr << k << std::endl;
             if (file != "")
                 load_data(data, file, k);
             k++;
@@ -208,15 +241,17 @@ int main(int argc, char* argv[]){
         errAbort(const_cast<char *>("Building kmer hash failed."));
     }
 
+    string trunk;
+    trunk_data(trunk,trunk_filename);
 
     int average;
     kmer_int_type_t seed_kmer = kmerMap.get_seed_kmer(average);
-    cout << intval_to_kmer(seed_kmer,g_kmer_length) << "   " << average << endl;
+//    cout << intval_to_kmer(seed_kmer,g_kmer_length) << "   " << average << endl;
 
     std::cout << "Begin loading sequence graph ..." << std::endl;
     time_t graph_begin = time(NULL);
     Sequence_graph sequenceGraph;
-    sequenceGraph.output_graph(kmerMap,seed_kmer,average,data);
+    sequenceGraph.output_graph(kmerMap,seed_kmer,average,data,trunk);
     time_t graph_end = time(NULL);
     std::cout << "Done sequence graph. (elapsed time: " << (graph_end-graph_begin) << " s)" << std::endl;
 
