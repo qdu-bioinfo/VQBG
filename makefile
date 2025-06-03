@@ -24,7 +24,7 @@ $(TARGET): $(OBJS)
 
 # 规则来构建每个对象文件
 %.o: $(SRC_DIR)/%.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) -c $< -o $@
 
 # 清理目标
 clean:
