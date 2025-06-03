@@ -6,8 +6,25 @@ VQBG is a powerful tool for virus genome assembly. The package includes precompi
 
 - **Operating System:** Linux
 - **C++ Standard:** C++11 or higher
+- **Boost**
+```
+ wget http://downloads.sourceforge.net/project/boost/boost/1.80.0/boost_1_80_0.tar.gz
+ tar xfz boost_1_80_0.tar.gz
+ rm boost_1_80_0.tar.gz
+ cd boost_1_80_0
+ ./bootstrap.sh --prefix=/usr/local --with-libraries=program_options,regex,filesystem,system
+ export
+ ./b2 install
+ cd /home
+ rm -rf boost_1_80_0
+ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
+```
 ## Installation
-### Use Precompiled Binaries:
+### 1. Install via Bioconda
+```
+conda install vqbg
+```
+### 2.Use Precompiled Binaries:
 Download VQBG from GitHub or clone the repository:
 ```
 git clone https://github.com/qdu-bioinfo/VQBG.git
@@ -32,7 +49,7 @@ export PATH="$PATH:/path/to/VQBG"
  ```
 source ~/.bashrc
 ```
-### Compile from source
+### 3.Compile from source
 To compile from source, navigate to the code directory:
 ```
 cd /path/to/VQBG
