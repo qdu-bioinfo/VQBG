@@ -1,6 +1,5 @@
 # 定义变量
 CXX = g++
-CXXFLAGS = -Wall -g
 SRC_DIR = code
 BIN_DIR = bin
 TARGET = $(BIN_DIR)/VQBG
@@ -20,8 +19,8 @@ all: $(TARGET)
 
 # 规则来构建目标
 $(TARGET): $(OBJS)
-	@mkdir -p $(BIN_DIR) # 确保 bin 目录存在
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJS)
+	@mkdir -p $(BIN_DIR) 
+	$(CXX) -o $@ $(OBJS)
 
 # 规则来构建每个对象文件
 %.o: $(SRC_DIR)/%.cpp
