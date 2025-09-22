@@ -21,8 +21,6 @@
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
-#include <iostream>
-#include <glpk.h>
 
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -389,7 +387,7 @@ public:
             kmer_int_type_t intval = kmer_to_intval(st.substr(i,g_kmer_length));
             add_used_kmer(intval,kmer_map.get_kmer_count(intval));
         }
-
+//        left = reverse_extend(kmer_map, seed);//向前扩展
         right = forward_extend(kmer_map, seed,type);//向后扩展
 
         std::string trunk = st + right;
@@ -409,17 +407,17 @@ public:
                 kmer_int_type_t intval = kmer_to_intval(it);
 
                 int candidate_average = kmer_map.get_forward_candidates(intval, candidates);
-
+//                cout << candidate_average << " : " <<  candidate_average*0.02 <<endl;
                 if (candidates.size() > 1){
                     for (int j = 0; j < candidates.size(); ++j) {
                         if (is_used(candidates[0].first) && j == 0){
                             continue;
                         }
                         if (candidates[j].second > candidate_average*0.05){
-
+//                            cout << i << endl;
                             int type;
                             string extend_str = forward_extend(kmer_map,intval,type);
-
+//                            cout << i << " : " << extend_str <<endl;
                             if (extend_str.length() > g_kmer_length){
                                 string final_kmer = extend_str.substr(extend_str.length()-g_kmer_length);
 
@@ -456,12 +454,13 @@ public:
                                         nodes[i+extend_str.length()-g_kmer_length-1].insert(extend_str.substr(extend_str.length()-g_kmer_length-1,g_kmer_length));
                                         in_del_num++;
 
-                                    } else if (type == 0 && i+extend_str.length() > nodes.size()-50&& extend_str.length()+i < trunk.length()){
+                                    } else if (type == 0 && i+extend_str.length() > nodes.size()-50){
 
                                         for (int k = 1; k < extend_str.length()-g_kmer_length+1; ++k) {
                                             string kmer = extend_str.substr(k,g_kmer_length);
                                             nodes[i+k].insert(kmer);
                                         }
+
                                     }
                                 }
                             }
@@ -470,6 +469,7 @@ public:
                 }
             }
         }
+
         return nodes;
     }
 
@@ -519,6 +519,7 @@ public:
                     if (candidates[j].second > candidate_average * 0.2 && candidates[j].second > 1) {
                         int type;
                         string extend_str = forward_extend(kmer_map, intval, type);
+//                        cout << extend_str <<endl;
                         if (extend_str.length() > g_kmer_length) {
                             string final_kmer = extend_str.substr(extend_str.length() - g_kmer_length);
                             int final_k;
@@ -534,6 +535,7 @@ public:
                                     string kmer = extend_str.substr(k, g_kmer_length);
                                     nodes[k].insert(kmer);
                                 }
+//                                cout << final_k << endl;
                             }
                         }
                     }
@@ -555,12 +557,14 @@ public:
             for (auto it = nodes[i].begin(); it != nodes[i].end(); ) {
                 if (kmerMap.get_kmer_count(*it) < max * 0.01) {
                     it = nodes[i].erase(it);  // 删除元素并返回下一个元素的迭代器
+//                    cout << *it << endl;
                     error++;
                 } else {
                     ++it;  // 移动到下一个元素
                 }
             }
         }
+        cout << "error node: " << error <<endl;
     }
 
     node_idx_t add_node(Node& node) {
@@ -620,6 +624,7 @@ public:
     }
 
     void set_parents(std::vector<Node>& nodes) {
+//        cout << "Begin add parents..." <<endl;
         for (size_t i = 0; i < nodes.size(); ++i) {
             if (!nodes[i].parents.empty())
                 nodes[i].parents.clear();
@@ -640,7 +645,7 @@ public:
         std::vector<Node> initial = sim;
         std::vector<size_t> delete_node;
         for (int i = 0; i < sim.size(); ++i) {
-//             && nodes[node_position[i]].size() == 1
+
 //            cout << i <<endl;
             int m = 0;
             while (sim[i].children.size() == 1 && sim[sim[i].children[0]].parents.size() == 1){
@@ -736,6 +741,8 @@ public:
         int sum = 0;
         for (size_t j = 0; j < sequence.length()-g_kmer_length+1; j++) {
             std::string kmer = sequence.substr(j, g_kmer_length);
+            //获得kmer的二进制数字形式
+//            kmer_int_type_t kmer_val = kmer_to_intval(kmer, g_kmer_length);
 
             int cov = kmerMap.get_kmer_count(kmer);
             sum = sum + cov;
@@ -747,7 +754,7 @@ public:
     }
     //根据kmer丰度获取点的丰度
     void add_kmer_mean_value(KmerMap& kmerMap,std::vector<Node>& nodes){
-
+//        cout << "Begin loading add coverage..." << endl;
         for (int i = 0; i < nodes.size(); ++i) {
             if (nodes[i].sequence.length() >= g_kmer_length){
                 int cov = str_sum(kmerMap,nodes[i].sequence);
@@ -755,7 +762,7 @@ public:
             }
         }
     }
-    void correction_ratio(std::vector<Node>& nodes, std::map<size_t,std::set<size_t>>& layer_nodes,int& i){
+    void correction_ratio(std::vector<Node>& nodes, std::map<size_t,std::set<size_t>>& layer_nodes,int& i){//确保每层点的丰度之和为1
         double sum;
         for (auto it: layer_nodes[nodes[i].node_layer]) {
             sum = sum + nodes[it].coverage;
@@ -832,7 +839,7 @@ public:
                         }
                     }
                     if (ls_f){
-
+//                        cout <<  "delete single node coverage : " << after_gra[i].coverage <<endl;
                         for (auto it : layer_nodes[after_gra[after_gra[ls].children[0]].node_layer]) {
                             string s1 = after_gra[i].sequence.substr(after_gra[i].sequence.length()-g_kmer_length+1);
                             string s2 = after_gra[it].sequence.substr(0,g_kmer_length-1);
@@ -873,6 +880,8 @@ public:
                     }
                     after_gra[i].children.clear();
                 } else{
+//                    cout << "pppppppppp" <<endl;
+//                    cout << "coverage : " << after_gra[i].coverage <<endl;
                     int dif_init = g_kmer_length;
                     size_t d;
                     size_t ls;
@@ -885,7 +894,7 @@ public:
                         }
                     }
                     if (ls_f){
-
+//                        cout <<  "coverage : " << after_gra[i].coverage <<endl;
                         for (auto it : layer_nodes[after_gra[after_gra[ls].parents[0]].node_layer]) {
                             string s1 = after_gra[it].sequence.substr(1);
                             string s2 = after_gra[i].sequence.substr(0,g_kmer_length-1);
@@ -916,9 +925,55 @@ public:
             if (!after_gra[i].parents.empty() || !after_gra[i].children.empty()){
                 after_gra2.push_back(after_gra[i]);
             }
+//            if (after_gra[i].parents.empty() && after_gra[i].children.empty()){
+//                layer_nodes[after_gra[i].node_layer].erase(i);
+//            }
         }
         return after_gra2;
     }
+    std::vector<Node> topologicalSort(std::vector<Node>& graph) {
+        std::vector<Node> result;
+        size_t id_counter = 0;
+        std::vector<int> inDegree(graph.size(), 0);
+        // 计算每个节点的入度
+        for (const Node& node : graph) {
+            for (node_idx_t child : node.children) {
+                inDegree[child]++;
+            }
+        }
+        std::queue<node_idx_t> q;
+        // 将所有入度为0的节点加入队列
+        for (int i = 0; i < graph.size() ; i++) {
+            if (inDegree[i] == 0) {
+                q.push(i);
+            }
+        }
+        while (!q.empty()) {
+            node_idx_t current = q.front();//访问队列中第一个元素
+//            cout << current << endl;
+            q.pop();//队列中第一个元素出队列
+            graph[current].set_id(id_counter);
+            result.push_back(graph[current]);
+            result.back().set_id(id_counter);
+            id_counter++;
+            // 遍历当前节点的所有子节点
+            for (node_idx_t child : graph[current].children) {
+                inDegree[child]--;
+                if (inDegree[child] == 0) {
+                    q.push(child);
+                }
+            }
+        }
+        // 检查是否存在环
+        if (result.size() != graph.size()) {
+            std::cout << "There is a cycle in the graph." << std::endl;
+            // 返回一个空的结果列表表示拓扑排序失败
+            return std::vector<Node>();
+        }
+
+        return result;
+    }
+
 
     void adjust_layer(std::vector<Node>& after_gra2, std::map<size_t,std::set<size_t>>& layer_nodes) {
         std::map<size_t,std::set<size_t>> layer_nodes2;
@@ -998,9 +1053,10 @@ public:
                     cha = 0;
                 }
                 if (cha < 0.015){
-
+//                    cout << after_gra[v1[i]].id << " ~~ " << after_gra[v2[j]].id << " cc " << cha <<endl;
                     same_path_node.first = after_gra[v1[i]].id;
                     same_path_node.second = after_gra[v2[j]].id;
+//                    cout << same_path_node.first << " -- " << same_path_node.second <<endl;
                     break;
                 }
             }
@@ -1137,7 +1193,11 @@ public:
                 sum_path = sum_path + start_local_paths[i].second;
 //            }
         }
-
+//        double sum_cov = 0;
+//        for(int i = 0; i < start_local_paths.size()*0.3; i++){
+//            cout <<  start_local_paths[i].second/sum_path << "  ";
+//        }
+//        cout <<"" <<endl;
         unordered_map<size_t,size_t> used_local;
         for (int i = 0; i < start_local_paths.size(); ++i) {
             for (int j = 0; j < start_local_paths[i].first.size(); ++j) {
@@ -1149,13 +1209,14 @@ public:
             if(min_c > 0){
                 for (int i = start_local_paths.size()-1; i >= 0; --i) {
                     double cov_path = start_local_paths[i].second/sum_path;
-
+//                || start_local_paths[i].second < 1
                     if (cov_path < min_c/2){
                         bool used_flag = true;
                         for (int d = 0; d < start_local_paths[i].first.size(); ++d) {
                             used_local[start_local_paths[i].first[d]]--;
                             if (used_local[start_local_paths[i].first[d]] == 0 &&
                             (cov_path > 0.01 || after_gra[start_local_paths[i].first[d]].node_layer == max_level || after_gra[start_local_paths[i].first[d]].node_layer == first_level)){
+//                                cout << start_local_paths[i].first[d] << " : " << start_local_paths[i].second << "  " << after_gra[start_local_paths[i].first[d]].node_layer << "   " << max_level << endl ;
                                 used_flag = false;
                             }
                         }
@@ -1169,12 +1230,13 @@ public:
             } else{
                 for (int i = start_local_paths.size()-1; i >= 0; --i) {
                     double cov_path = start_local_paths[i].second/sum_path;
-
+//                || start_local_paths[i].second < 1
                     if (cov_path < 0.02 ){
                         bool used_flag = true;
                         for (int d = 0; d < start_local_paths[i].first.size(); ++d) {
                             used_local[start_local_paths[i].first[d]]--;
                             if (used_local[start_local_paths[i].first[d]] == 0 && cov_path > 0.01 ){
+//                                cout << start_local_paths[i].first[d] << " : " << start_local_paths[i].second << "  " << after_gra[start_local_paths[i].first[d]].node_layer << "   " << max_level << endl ;
                                 used_flag = false;
                             }
                         }
@@ -1228,7 +1290,7 @@ public:
             }
         }
         int m = 0;
-
+//        ofstream ofile("15node_cov.txt");
         int before_sum = 0;
         unordered_map<string,int> used_string;
         size_t sim_m = 0;
@@ -1351,6 +1413,7 @@ public:
                         local_flag2 = false;
                     }
 
+
                         new_start.clear();
                         for (auto l : layer_nodes[min_layer2]) {
                             new_start.insert(after_gra[l].id);
@@ -1400,7 +1463,7 @@ public:
                         }
 
                         new_start.clear();
-
+//                        cout << "max_level : " << m << "  " << sim_m <<endl;
                         int next_level = max_level+1;
                         for (auto l : layer_nodes[next_level]) {
                             new_start.insert(after_gra[l].id);
@@ -1420,7 +1483,7 @@ public:
 
                     sim_layer_node.push_back(sim_m);
                     layer_sim_node.push_back(m);
-
+//                    ofile << sim_m << " (" << after_local_paths[i].second << ")  ";
                     sim_m++;
                     node_cov.push_back(after_local_paths[i].second);
                     simplified_points.push_back(points);
@@ -1433,7 +1496,7 @@ public:
                     }
                 }
             }
-
+//            ofile << "" <<endl;
             sim_layer.push_back(sim_layer_node);
             start.clear();
             if (stop_flag){
@@ -1443,6 +1506,8 @@ public:
                 start.push_back(it);
             }
         }
+//        ofile.close();
+//        cout << before_sum << " -- " << simplified_points.size() <<endl;
 
         return simplified_points;
     }
@@ -1512,8 +1577,62 @@ public:
         }
     }
 
+    bool areEqualWithOneOrLessErrors(const std::string& s1, const std::string& s2) {
+        // 如果长度不同，直接返回false
+        if (s1.length() != s2.length()) {
+            return false;
+        }
 
+        int errorCount = 0;
 
+        // 比较两个字符串的每个字符
+        for (size_t i = 0; i < s1.length(); ++i) {
+            if (s1[i] != s2[i]) {
+                errorCount++;
+                if (errorCount > 1) {
+                    return false;  // 错误超过一个字符，直接返回false
+                }
+            }
+        }
+
+        // 如果错误字符数小于等于1，则返回true
+        return errorCount <= 1;
+    }
+
+    bool merge_length_less_hundred(KmerMap& kmerMap,std::vector<Node>& result,std::vector<std::string>& data,vector<size_t>& p,vector<size_t>& c){
+        string p_str = result[p[0]].sequence;
+        string surplus_str = "";
+        for (int i = 1; i < p.size()/2; ++i) {
+            p_str += result[p[i]].sequence.substr(g_kmer_length-1);
+        }
+        for (int i = p.size()/2; i < p.size(); ++i) {
+            surplus_str += result[p[i]].sequence.substr(g_kmer_length-1);
+        }
+        for (int i = 0; i < c.size(); ++i) {
+            surplus_str += result[c[i]].sequence.substr(g_kmer_length-1);
+        }
+        int support = 0;
+        for (int i = 0; i < p_str.length()-g_kmer_length+1; ++i) {
+            string kmer = p_str.substr(i,g_kmer_length);
+            std::vector<pair<size_t, size_t>> reads = kmerMap.get_kmer_read(kmer);
+            for (int r = 0; r < reads.size(); ++r) {
+                string read = data[reads[r].first].substr(reads[r].second);
+                string str1 = p_str.substr(i);
+                string str2 = str1 + surplus_str;
+                if (str2 == read.substr(0, str2.length())) {
+                    support++;
+                }
+            }
+        }
+        bool flag;
+
+        if (support > 1){
+            flag = true;
+        } else{
+            flag = false;
+        }
+        return flag;
+    }
     void get_edge_ratio(vector<vector<size_t>>& sim_layer,vector<Node>& sim_graph1){
         for (int i = 0; i < sim_layer.size(); ++i) {
 
@@ -1535,7 +1654,7 @@ public:
                           ,std::map<size_t,std::set<size_t>>& layer_nodes,vector<vector<size_t>>& sim_layer,vector<size_t>& layer_sim_node
                           ,vector<vector<pair<size_t,size_t>>>& parent_different_node,std::vector<std::string>& data,int& min_l
                           ,std::unordered_map<std::vector<size_t>,string,VectorHash>& vec_string,vector<double>& node_cov){
-        cout << "Begin create bubble graph..." <<endl;
+        cout << "Begin create sim graph..." <<endl;
         sim_graph1.resize(sim_gra.size());
 
         for (int i = 0; i < sim_gra.size(); ++i) {
@@ -1567,19 +1686,19 @@ public:
                 int cov_sum = 0;
                 double min_cov = 1;
                 for (int j = 0; j < sim_graph1[i].c_node_id.size(); ++j) {
-
+//                    cout << after_gra[sim_graph1[i].c_node_id[j]].coverage <<endl;
                     if (after_gra[sim_graph1[i].c_node_id[j]].coverage < min_cov && after_gra[sim_graph1[i].c_node_id[j]].coverage>0){
                         min_cov = after_gra[sim_graph1[i].c_node_id[j]].coverage;
                     }
                 }
                 for (int j = 0; j < sim_graph1[i].c_node_id.size(); ++j) {
-
+//                    cout << after_gra[sim_graph1[i].c_node_id[j]].coverage-min_cov <<endl;
                     if (abs(after_gra[sim_graph1[i].c_node_id[j]].coverage-min_cov) < 0.02 || after_gra[sim_graph1[i].c_node_id[j]].coverage==0){
                         cov = cov + after_gra[sim_graph1[i].c_node_id[j]].coverage;
                         cov_sum++;
                     }
                 }
-
+//                cout << "zero : " << i << "  -  " << cov <<endl;
                 sim_graph1[i].coverage = cov/cov_sum;
 
             }
@@ -1597,7 +1716,9 @@ public:
                     }
                 }
             }
-
+//            if (local_children.size() == 0){
+//                cout << i <<endl;
+//            }
             if (local_children.size() == 1){
                 pair<size_t,double> edge;
                 edge.first = local_children[0];
@@ -1644,7 +1765,7 @@ public:
                         }
 
                     }
-
+//                    cout << " support  : " << support <<endl;
                     local_children_sup[l] = support;
 
                 }
@@ -1655,7 +1776,7 @@ public:
                 for (int l = 0; l < local_children_sup.size(); ++l) {
                     if (su_sum != 0){
                         double d_sup = local_children_sup[l]/su_sum;
-
+//
                         if (d_sup >= 0.08 && ((local_children_sup[l] > 1 && su_sum != 1) || (local_children_sup[l] == 1 && su_sum == 1))){
                             connect = true;
                             pair <size_t,double> edge;
@@ -1676,6 +1797,7 @@ public:
                 no_child_num++;
             }
         }
+//        cout << no_child_num << "  " << sim_graph1.size() <<endl;
         for (size_t i = 0; i < sim_gra.size(); ++i) {//给点之间添加关系
             if (sim_graph1[i].children.size() == 0){
 //                cout << i << endl;
@@ -1734,7 +1856,9 @@ public:
                         }
                     }
                 }
-
+//                if (local_children.size() == 0){
+//                    cout << i << " : " << local_parents.size() <<endl;
+//                }
                 if (local_parents.size() == 0){
                     continue;
                 }
@@ -1843,7 +1967,7 @@ public:
                 if (sim_graph1[sim_layer[i][j]].children.empty()){
                     double cha_min = 1;
                     int cha_l;
-
+//                    cout << sim_layer[i][j] << " : " << sim_layer[i+1].size() <<endl;
                     for (int k = 0; k < sim_layer[i+1].size(); ++k) {
                         if (abs(sim_graph1[sim_layer[i+1][k]].coverage-sim_graph1[sim_layer[i][j]].coverage) < cha_min){
                             cha_min = abs(sim_graph1[sim_layer[i+1][k]].coverage-sim_graph1[sim_layer[i][j]].coverage);
@@ -1881,6 +2005,7 @@ public:
         for (int i = 0; i < sim_graph1.size(); ++i) {
             string str;
             if (parent_different_node[i].size() > 0){
+//                for (int j = 0; j < sim_graph1[i].c_node_id.size(); ++j) {
                 for (int j = 0; j < parent_different_node[i].size(); ++j) {
                     str = result[parent_different_node[i][j].second].sequence;
                     for (int k = 0; k < str.length() - g_kmer_length + 1; ++k) {
@@ -1942,15 +2067,20 @@ public:
         }
     }
 
-    void determine_nodes_contigs(vector<Node>& sim_graph1,vector<Node>& sim_graph2,vector<vector<size_t>>& sim_layer,std::vector<std::map<size_t,size_t>>& same_position_sim){
-
+    void determine_nodes_contigs(vector<Node>& sim_graph1,vector<Node>& sim_graph2,vector<vector<size_t>>& sim_layer){
+        cout << "determine_nodes_contigs..." <<endl;
+//        ofstream file("15single_nodes.txt");
         for (int i = 0; i < sim_graph2.size(); ++i) {
             Node node = sim_graph2[i];
-
+//            if (node.children.size() == 1 && sim_graph2[node.children[0]].parents.size() == 1){
+//                cout << "" <<endl;
+//            }
             while(sim_graph2[i].children.size() == 1 && sim_graph2[sim_graph2[i].children[0]].parents.size() == 1){
                 for (int j = 0; j < sim_graph2[sim_graph2[i].children[0]].children.size(); ++j) {
                     for (int k = 0; k < sim_graph2[sim_graph2[sim_graph2[i].children[0]].children[j]].parents.size(); ++k) {
                         if (sim_graph2[sim_graph2[sim_graph2[i].children[0]].children[j]].parents[k] == sim_graph2[i].children[0]){
+
+//                            cout << sim_graph2[node.children[0]].children[j] << " == " <<  sim_graph2[sim_graph2[node.children[0]].children[j]].parents[k] <<endl;
                             sim_graph2[sim_graph2[sim_graph2[i].children[0]].children[j]].parents[k] = sim_graph2[i].id;
                         }
                     }
@@ -1966,11 +2096,14 @@ public:
                 sim_graph2[i].sequence = sim_graph2[i].sequence + sim_graph2[sim_graph2[i].children[0]].sequence.substr(g_kmer_length-1);
                 sim_graph2[i].children = sim_graph2[sim_graph2[i].children[0]].children;
                 sim_graph2[i].single_node_id.push_back(nc);
-
+//                cout << nc << "  ";
                 sim_graph2[nc].children.clear();
                 sim_graph2[nc].parents.clear();
             }
 
+//            if (sim_graph2[i].children.size() == 1 && sim_graph2[sim_graph2[i].children[0]].parents.size() == 1){
+//                file << i << endl;
+//            }
         }
         for (int i = 0; i < sim_graph2.size(); ++i) {
             if (sim_graph2[i].single_node_id.size()>1){
@@ -1982,12 +2115,7 @@ public:
             }
 
         }
-        int sim2_sum = 0;
-        for (int i = 0; i < sim_graph2.size(); ++i) {
-            if (sim_graph2[i].children.size() != 0 || sim_graph2[i].parents.size() != 0 ){
-                sim2_sum++;
-            }
-        }
+
     }
 
     vector<pair<vector<size_t>,double>> get_contigs(vector<Node>& sim_graph2,std::vector<std::map<size_t,size_t>>& same_position_sim,map<size_t,size_t>& use_node){
@@ -1996,15 +2124,18 @@ public:
         int m = 0;
         double sum_cov = 0;
         vector<Node> sim_graph = sim_graph2;
-
+//        map<size_t,size_t> use_node;
         int start_num = 0;
         double start_aver = 1;
         for (int i = 0; i < sim_graph2.size(); ++i) {
             if (sim_graph2[i].parents.size() == 0 && sim_graph2[i].children.size()!= 0){
                 start_num++;
+//                start_aver = start_aver + sim_graph1[i].coverage;
+//                cout << i << " : " << sim_graph2[i].coverage << "  " <<endl;
             }
             if (sim_graph2[i].parents.size() == 0 && sim_graph2[i].children.size()!= 0 && sim_graph2[i].coverage > 0 && start_aver > sim_graph2[i].coverage){
                 start_aver = sim_graph2[i].coverage;
+//                cout << sim_graph2[i].coverage <<endl;
             }
         }
         double limit_cov;
@@ -2013,7 +2144,7 @@ public:
         } else{
             limit_cov = start_aver;
         }
-
+//        cout << "limit cov : " << limit_cov <<endl;
         for (int i = 0; i < sim_graph2.size(); ++i) {
             double min_start = 1;
             int min_start_i;
@@ -2030,6 +2161,8 @@ public:
             if (!start_flag){
                 continue;
             }
+
+
             while(sim_graph2[min_start_i].coverage > limit_cov){
                 vector<double> path_node_coverage;
 
@@ -2082,22 +2215,6 @@ public:
                             }
                         }
 
-                        vector<int> pair_num;
-                        for (int s = path.size()-1; s >= 1; --s) {//根据配对节点判断
-                            if (sim_graph2[path[s]].parents.size() == node.children.size()) {
-                                for (int c = 0; c < node.children.size(); ++c) {
-                                    if (same_position_sim[path[s-1]].find(node.children[c]) != same_position_sim[path[s-1]].end() && sim_graph2[node.children[c]].coverage != 0) {
-                                        pair_num.push_back(node.children[c]);
-                                    }
-                                }
-                                if (pair_num.size() > 0) {//可以通过配对信息找到唯一与这条路匹配的路径
-                                    p_flag = true;
-                                    p_i = s;
-                                    break;
-                                }
-                            }
-                        }
-
                         if (find_flag){
                             if (cov_num.size() == 1){
                                 node = sim_graph2[cov_num[0]];
@@ -2107,42 +2224,20 @@ public:
                                     path_node_coverage.push_back(node.coverage);
                                 }
                             } else{
-                                bool same_cov_node = false;
-                                for (int pa = 0; pa < cov_num.size()-1; ++pa) {
-                                    for (int pa2 = pa+1; pa2 < cov_num.size(); ++pa2) {
-                                        if (sim_graph2[cov_num[pa]].coverage != sim_graph2[cov_num[pa2]].coverage){
-                                            same_cov_node = true;
-                                            break;
-                                        }
-                                    }
-                                    if (same_cov_node){
-                                        break;
+                                double min_cov = 1;
+                                int min_n_i;
+                                for (int pa = 0; pa < cov_num.size(); ++pa) {
+                                    if (sim_graph2[cov_num[pa]].coverage < min_cov){
+                                        min_cov = sim_graph2[cov_num[pa]].coverage;
+                                        min_n_i = cov_num[pa];
                                     }
                                 }
-                                if (same_cov_node || !p_flag){
-                                    double min_cov = 1;
-                                    int min_n_i;
-                                    for (int pa = 0; pa < cov_num.size(); ++pa) {
-                                        if (sim_graph2[cov_num[pa]].coverage < min_cov){
-                                            min_cov = sim_graph2[cov_num[pa]].coverage;
-                                            min_n_i = cov_num[pa];
-                                        }
-                                    }
-                                    node = sim_graph2[min_n_i];
-                                    path.push_back(node.id);
-                                    use_node[node.id]++;
-                                    if (node.coverage > 0){
-                                        path_node_coverage.push_back(node.coverage);
-                                    }
-                                } else{
-                                    node = sim_graph2[pair_num[0]];
-                                    path.push_back(node.id);
-                                    use_node[node.id]++;
-                                    if (node.coverage > 0){
-                                        path_node_coverage.push_back(node.coverage);
-                                    }
+                                node = sim_graph2[min_n_i];
+                                path.push_back(node.id);
+                                use_node[node.id]++;
+                                if (node.coverage > 0){
+                                    path_node_coverage.push_back(node.coverage);
                                 }
-
                             }
                         } else{
 
@@ -2150,10 +2245,14 @@ public:
                             bool final_flag2 = false;
                             node_idx_t c2;
                             if (path_cov!=10){
+//                                        cout << "!10  " << node.id <<endl;
                                 for (int j = 0; j < node.children.size(); ++j) {
+//                                            cout << abs(path_cov - sim_graph1[node.children[j]].coverage) << "  " << sim_graph1[node.children[j]].id << " : "<< sim_graph1[node.children[j]].coverage<<endl;
                                     if (abs(path_cov - sim_graph2[node.children[j]].coverage) < 0.02 && sim_graph2[node.children[j]].coverage!=0) {
+
                                         final_flag2 = true;
                                         c2 = node.children[j];
+
                                     }
                                 }
 
@@ -2165,6 +2264,7 @@ public:
                                 if (node.coverage > 0){
                                     path_node_coverage.push_back(node.coverage);
                                 }
+//                                        cout << node.id <<endl;
                             } else {//与路径丰度不相近
                                 for (int k = path.size() - 1; k >= 1; --k) {
                                     node_idx_t c;
@@ -2261,10 +2361,12 @@ public:
                 }
                 std::sort(path_node_coverage.begin(), path_node_coverage.end());
 
+
                 if (path_cov == 10){
+
                     path_cov = 0;
                     double num_n = 0;
-
+//                    cout << "size : " << path_node_coverage.size() << endl;
                     if (path_node_coverage.size() <= 4){
                         for (int pa = 0; pa < path_node_coverage.size(); ++pa){
                             if (path_node_coverage[pa] < 1){
@@ -2281,9 +2383,15 @@ public:
                             }
                         }
                     }
+//                    for (int pa = 0; pa < path_node_coverage.size(); ++pa) {
+//                        cout << path_node_coverage[pa]  << "  ";
+//                    }
+//                    cout << "" <<endl;
+
+
                     path_cov = path_cov/num_n;
                 }
-
+//                cout << "path cov : " << path_cov <<endl;
                 pair<vector<size_t>,double> p;
                 p.first = path;
                 p.second = path_cov;
@@ -2305,6 +2413,7 @@ public:
             vector<size_t> path2;
             if (use_node.find(i)==use_node.end() && (sim_graph2[i].children.size() > 0 || sim_graph2[i].parents.size() > 0) &&
                 sim_graph2[i].single_node_id.size() > 1){
+//                cout << "---------------- first model ----------------  " << i <<endl;
                 Node node = sim_graph2[i];
                 path2.push_back(node.id);
                 use_node[node.id]++;
@@ -2312,7 +2421,7 @@ public:
                 int used_count = use_node[node.id];
                 int used_num = 0;
                 while(!node.children.empty()){
-
+//                        cout << node.id << " : " << use_node[node.id] << endl;
                     if (use_node[node.id] == used_count){
                         used_num++;
                     } else{
@@ -2320,7 +2429,7 @@ public:
                         used_num = 0;
                     }
                     if(use_node[node.id] >= 10){
-
+// || (used_count >= 4 && used_num >= 5)
                         break;
                     }
                     if (node.children.size() == 1){
@@ -2335,7 +2444,7 @@ public:
                                 is_used_flag = true;
                                 node = sim_graph2[node.children[c]];
                                 path2.push_back(node.id);
-
+//                                    cout << "55  " << node.id <<endl;
                                 use_node[node.id]++;
                             }
                         }
@@ -2356,7 +2465,7 @@ public:
                                     p_flag = true;
                                     path2.push_back(node.id);
                                     use_node[node.id]++;
-
+//                                        cout << "66  " << node.id <<endl;
                                     break;
                                 }
                             }
@@ -2388,6 +2497,7 @@ public:
                         used_num = 0;
                     }
                     if(use_node[node.id] >= 10){
+// || (used_count >= 3 && used_num >= 4)
                         break;
                     }
                     if (node.parents.size() == 1){
@@ -2443,6 +2553,27 @@ public:
         }
         return paths;
     }
+
+    void used_repeat_paths(map<size_t,size_t>& use_node,vector<pair<vector<size_t>,double>>& paths){
+        set<int,std::greater<int>> similar;
+        for (int i = 0; i < paths.size(); ++i) {
+            int used_node_num = 0;
+            for (int j = 0; j < paths[i].first.size(); ++j) {
+                if (use_node[paths[i].first[j]] > 10){
+                    used_node_num++;
+                }
+            }
+//            cout << paths[i].first.size() << " - " << used_node_num <<endl;
+            if(used_node_num >= paths[i].first.size()*0.4 || paths[i].first.size() < 10){
+                similar.insert(i);
+//                cout << i << endl;
+            }
+        }
+        for (auto it : similar) {
+            paths.erase(paths.begin()+it);
+        }
+    }
+
 
     //获取两个字符串中不同字符的个数
     int countDifferences(std::string &str1, std::string &str2) {
@@ -2505,19 +2636,23 @@ public:
                int num = countDifferences(paths_str[i].first,paths_str[j].first);
 
                 int minLength = std::min(paths_str[i].first.length()-add_length[i], paths_str[j].first.length()-add_length[j]);
+//                cout << minLength <<endl;
                 if (num < minLength*0.02 && num != 0){
                     similar[i]++;
                     similar[j]++;
                 }
 
             }
+//            paths_str[i].second = std::round(paths_str[i].second * 1000.0) / 1000.0;
         }
         std::vector<std::pair<int, int>> vec(similar.begin(), similar.end());
         // 按值从大到小排序
         std::sort(vec.begin(), vec.end(), [](const std::pair<int, int>& a, const std::pair<int, int>& b) {
             return a.second > b.second;
         });
+
         if (vec.size() > 2){
+
             if (vec[0].second == vec[1].second){
                 if (paths_str[vec[0].first].second > paths_str[vec[1].first].second) {
                     delete_p.insert(vec[1].first);
@@ -2531,7 +2666,6 @@ public:
                 delete_p.insert(vec[1].first);
                 paths_str.erase(paths_str.begin()+vec[0].first);
                 paths_str.erase(paths_str.begin()+vec[1].first);
-
             }
         }
 
@@ -2542,14 +2676,19 @@ public:
         for (int i = 0; i < paths_str.size()-1; ++i) {
             for (int j = i + 1; j < paths_str.size(); ++j) {
                 int num = countDifferences(paths_str[i].first, paths_str[j].first);
-                int minLength = std::min(paths_str[i].first.length(),paths_str[j].first.length());
+//                cout << i << "(" << add_length[i] << ")" << " - " << j << " : " << num <<endl;
+                int minLength = std::min(paths_str[i].first.length(),
+                                         paths_str[j].first.length());
+//                cout << minLength << endl;
                 if (num < minLength * 0.01 && num != 0) {
                     if(paths_str[i].first.length()==paths_str[j].first.length()){
+//                    if (similar.find(i) == similar.end() && similar.find(j) == similar.end()) {
                         if (paths_str[i].second > paths_str[j].second) {
                             similar[j]++;
                         } else {
                             similar[i]++;
                         }
+//                    }
                     } else{
                         if (similar.find(i) == similar.end() && similar.find(j) == similar.end()){
                             if (paths_str[i].first.length()-add_length[i] > paths_str[j].first.length()-add_length[j]){
@@ -2598,6 +2737,18 @@ public:
         return big_one;
     }
 
+    set<size_t> get_gap_node(std::vector<Node>& after_gra){
+        set<size_t> gap_node;
+        for (int i = 0; i < after_gra.size(); ++i) {
+            for (int j = 0; j < after_gra[i].children.size(); ++j) {
+                if (after_gra[i].node_layer+1 != after_gra[after_gra[i].children[j]].node_layer){
+                    gap_node.insert(i);
+                }
+            }
+        }
+        return gap_node;
+    }
+
     void groupDataByDifference(std::vector<double>& data,double& local_cov) {
 
         std::sort(data.begin(), data.end());
@@ -2626,8 +2777,6 @@ public:
             }
         }
 
-
-//        std::cout << "Grouped Data: \n";
         bool flag = false;
         for (const auto& group : groupedData) {
 //            std::cout << "[ ";
@@ -2653,8 +2802,24 @@ public:
 
     }
 
+    // 归一化处理
+    vector<double> normalize(const vector<double>& weightedMean) {
+        vector<double> normalizedValues;
+        double sum = 0;
+        for (size_t i = 0; i < weightedMean.size(); ++i) {
+            sum = sum + weightedMean[i];
+        }
+        // 按照线性归一化公式进行归一化
+        for (size_t i = 0; i < weightedMean.size(); ++i) {
+            double normalized = weightedMean[i] / sum;
+            normalizedValues.push_back(normalized);
+        }
+        return normalizedValues;
+    }
+
+
     void path_coverage(KmerMap& kmerMap,vector<pair<vector<size_t>,double>>& paths,std::vector<std::string>& data,set<int>& delete_p,
-                       map<size_t,size_t>& used_p,vector<Node>& sim_graph3,vector<pair<string,double>>& paths_str){
+    map<size_t,size_t>& used_p,vector<Node>& sim_graph3,vector<pair<string,double>>& paths_str){
         int m = 0;
         vector<vector<pair<int,int>>> special_node;
         vector<pair<vector<double>,double>> coverage;
@@ -2698,24 +2863,24 @@ public:
 
         aver_length = aver_length / paths_str.size();
         vector<double> cov_p;
-            size_t position = paths_str[initial_i].first.find(initial_s);
-            double sum = 0;
-            for (int i = 0; i < paths_str.size(); ++i) {
-                double num = 0;
-                for (int k = 0; k < data.size(); ++k) {
-                    string str = paths_str[i].first.substr(position, position + initial_length);
-                    if (str.find(data[k]) != std::string::npos) {
-                        num++;
-                    }
+        size_t position = paths_str[initial_i].first.find(initial_s);
+        double sum = 0;
+        for (int i = 0; i < paths_str.size(); ++i) {
+            double num = 0;
+            for (int k = 0; k < data.size(); ++k) {
+                string str = paths_str[i].first.substr(position, position + initial_length);
+                if (str.find(data[k]) != std::string::npos) {
+                    num++;
                 }
-                num = num / initial_length;
-                sum = sum + num;
-                cov_p.push_back(num);
             }
-            for (int i = 0; i < cov_p.size(); ++i) {
-                cov_p[i] = cov_p[i] / sum;
+            num = num / initial_length;
+            sum = sum + num;
+            cov_p.push_back(num);
+        }
+        for (int i = 0; i < cov_p.size(); ++i) {
+            cov_p[i] = cov_p[i] / sum;
 
-            }
+        }
 
         double sum_cov = 0;
         for (int i = 0; i < coverage.size(); ++i) {
@@ -2731,20 +2896,6 @@ public:
         for (int val = 0; val < normalizedValues.size();val++) {
             paths_str[val].second = normalizedValues [val];
         }
-    }
-    // 归一化处理
-    vector<double> normalize(const vector<double>& weightedMean) {
-        vector<double> normalizedValues;
-        double sum = 0;
-        for (size_t i = 0; i < weightedMean.size(); ++i) {
-            sum = sum + weightedMean[i];
-        }
-        // 按照线性归一化公式进行归一化
-        for (size_t i = 0; i < weightedMean.size(); ++i) {
-            double normalized = weightedMean[i] / sum;
-            normalizedValues.push_back(normalized);
-        }
-        return normalizedValues;
     }
 
     void output_graph(KmerMap& kmerMap, kmer_int_type_t& seed_kmer,int& average,std::vector<std::string>& data,string& trunk){
@@ -2780,7 +2931,7 @@ public:
         vector<std::map<string,node_idx_t>> node_id_position = get_bubble_graph(nodes,span_part);
         set_parents(node_set_);
 
-        cout << "Bubble structured de Bruijn graph nodes: " << node_set_.size() <<endl;
+        cout << "Bubble-structured de Bruijn graph nodes : " << node_set_.size() <<endl;
         std::vector<Node> initial_gra = node_set_;
 
         //合并特殊点
@@ -2801,7 +2952,7 @@ public:
             re_id(after_gra2);
             set_parents(after_gra2);
         }
-        cout << "Simplified bubble structured de Bruijn graph nodes : " <<  after_gra2.size() <<endl;
+        cout << "Simplified Bubble-structured de Bruijn graph nodes : " <<  after_gra2.size() <<endl;
 
         adjust_layer(after_gra2,layer_nodes);
 
@@ -2845,7 +2996,7 @@ public:
         }
 
         time_t compression_end = time(NULL);
-        cout << "Compression_time: " << compression_end - compression_begin << "s" << endl;
+        cout << "compression_time: " << compression_end - compression_begin << "s" << endl;
 
         vector<set<size_t>> sim_alone_node;
         vector<vector<pair<size_t,size_t>>> parent_different_node;
@@ -2862,15 +3013,19 @@ public:
         get_pair_end(same_position_sim,data,sim_graph1,read_first_node_sim,node_pair_sim);
 
         vector<Node> sim_graph2 = sim_graph1;
-        determine_nodes_contigs(sim_graph1,sim_graph2,sim_layer,same_position_sim);
+        determine_nodes_contigs(sim_graph1,sim_graph2,sim_layer);
         vector<Node> sim_graph3 = sim_graph2;
         map<size_t,size_t> use_node;
         vector<pair<vector<size_t>,double>> paths = get_contigs(sim_graph2,same_position_sim,use_node);
+
+
         vector<pair<string,double>> paths_str;
 
         for (int i = 0; i < paths.size(); ++i) {
             string str = "";
+
             for (int j = 0; j < paths[i].first.size(); ++j) {
+
                 if (j == 0){
                     str = str + sim_graph2[paths[i].first[j]].sequence;
                 } else{
@@ -2884,16 +3039,25 @@ public:
             paths_str.push_back(ps);
 
         }
-
+        //删除相似度高的contig
         set<int> delete_p;
         similarity_between_roads(paths_str,paths,sim_graph1,sim_layer,delete_p);
+        cout << "path_num : " << paths_str.size() <<endl;
+        int length = 0;
+        int max_sum_l = 0;
+        for (int i = 0; i < paths_str.size(); ++i) {
+            if (paths_str[i].first.length() > max_sum_l){
+                max_sum_l = paths_str[i].first.length();
+            }
+        }
+        max_sum_l = max_sum_l*0.3;
 
         path_coverage(kmerMap,paths,data,delete_p,use_node,sim_graph3,paths_str);
-
         cout << "  Strain    Frequency    Length  " <<endl;
         ofstream path_file(output_filename.c_str());
 
         for (int i = 0; i < paths_str.size(); ++i) {
+
                 path_file << ">" << i << " frequency (" << paths_str[i].second << ")" <<endl;
                 path_file << paths_str[i].first <<endl;
                 std::cout << std::fixed << std::setprecision(3);
