@@ -5,7 +5,7 @@ VQBG is a powerful tool for virus genome assembly. The package includes precompi
 ## Requirements
 
 - **Operating System:** Linux
-- **C++ Standard:** C++11 or higher
+- **C++ Standard:** C++14 or higher
 - **Boost**
 ```
  wget http://downloads.sourceforge.net/project/boost/boost/1.80.0/boost_1_80_0.tar.gz
