@@ -100,7 +100,7 @@ Usage: Assemble [--reads/--kmers] <filename>  [opts]
 
 - 6 Poliovirus (6,000x)
 
-- 6 Poliovirus (200x-14,000x)
+- 6 Poliovirus (200x-12,000x)
 
 3.Real Dataset
 
