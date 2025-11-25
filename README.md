@@ -19,6 +19,14 @@ VQBG is a powerful tool for virus genome assembly. The package includes precompi
  rm -rf boost_1_80_0
  export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/
 ```
+- **GLPK**
+```
+wget https://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
+tar -zxvf glpk-4.65.tar.gz
+cd glpk-4.65
+./configure --prefix=/usr/local
+make
+```
 ## Installation
 ### 1. Install via Bioconda
 ```
@@ -36,18 +44,6 @@ cd /path/to/VQBG
  Install by running make
  ```
 make
-```
- Set up environment variables
- ```
-vim ~/.bashrc
-```
- Add the following line to ~/.bashrc
- ```
-export PATH="$PATH:/path/to/VQBG"
-```
- Apply the changes
- ```
-source ~/.bashrc
 ```
 ### 3.Compile from source
 To compile from source, navigate to the code directory:
@@ -86,6 +82,8 @@ Usage: Assemble [--reads/--kmers] <filename>  [opts]
 
 ### Example command
 ```
+./fc-virus -t fq --left ./path/to/forward.fastq --right ./path/to/reverse.fastq -o /output_file/
+
 ./VQBG -k 25 -q -t ./path/to/FC-Virus.fa -o VQBG.fasta -i ./path/to/forward.fastq -i ./path/to/reverse.fastq
 ```
 ## Experiment

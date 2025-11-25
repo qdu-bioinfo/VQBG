@@ -217,12 +217,12 @@ int main(int argc, char* argv[]){
     time_t begin = time(NULL);
 
     std::vector<std::string> data;
-
+    int k;
     std::cerr << "Begin loading reads ..." << std::endl;
     if(reads_type == "fasta"){
         load_data(data, reads_file.back() ,1);
     } else if (reads_type == "fastq"){
-        int k = 1;
+        k = 1;
         for(const std::string& file : reads_file){
             std::cerr << file << std::endl;
             if (file != "")
@@ -251,7 +251,7 @@ int main(int argc, char* argv[]){
     std::cout << "Begin loading sequence graph ..." << std::endl;
     time_t graph_begin = time(NULL);
     Sequence_graph sequenceGraph;
-    sequenceGraph.output_graph(kmerMap,seed_kmer,average,data,trunk);
+    sequenceGraph.output_graph(kmerMap,seed_kmer,average,data,trunk,k);
     time_t graph_end = time(NULL);
     std::cout << "Done sequence graph. (elapsed time: " << (graph_end-graph_begin) << " s)" << std::endl;
 

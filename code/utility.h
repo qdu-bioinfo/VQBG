@@ -13,6 +13,7 @@
 #include <map>
 #include <cstdio>
 #include <cstdarg>
+#include <cstdlib>
 
 typedef unsigned long long kmer_int_type_t;
 char int_to_base(int baseval);
