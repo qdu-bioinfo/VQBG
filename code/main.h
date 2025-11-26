@@ -10,6 +10,7 @@ static const char *short_options = "k:i:t:o:a:q";
 
 static struct option long_options[] = {
         // general options
+        {"help",no_argument,0,'h'},
         {"kmer_length",required_argument,0,'k'},
         {"reads",required_argument,0,'i'},
         {"trunk_filename",required_argument, 0,'t'},
